@@ -1,0 +1,38 @@
+name: upload test!
+
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        description: 'Host OS'
+        required: false
+        type: string
+        default: '["ubuntu-22.04"]'
+  pull_request:      # Triggers the workflow on pull request events
+
+permissions: write-all
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set remote to fork
+        run: |
+          git remote set-url origin https://github.com/${{ github.repository }}.git
+
+      - name: commit files
+        run: |
+          date > generated.txt
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "generated"
+          git push -f origin HEAD:${{ github.head_ref }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

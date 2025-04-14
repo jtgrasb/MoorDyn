@@ -8,7 +8,7 @@ on:
         required: false
         type: string
         default: '["ubuntu-22.04"]'
-  pull_request:      # Triggers the workflow on pull request events
+  #pull_request:      # Triggers the workflow on pull request events
 
 permissions: write-all
 
@@ -63,13 +63,13 @@ jobs:
         ls ${{ github.workspace }}/generated_files
 
     # Step 4: Upload the generated files
-    - name: Upload generated files - Windows
-      uses: actions/upload-artifact@v4
-      with:
-        name: generated-libraries
-        path: |
-          ${{ github.workspace }}/generated_files/libmoordyn.dll
-      if: runner.os == 'Windows'
+    #- name: Upload generated files - Windows
+    #  uses: actions/upload-artifact@v4
+    #  with:
+    #    name: generated-libraries
+    #    path: |
+    #      ${{ github.workspace }}/generated_files/libmoordyn.dll
+    #  if: runner.os == 'Windows'
 
     - name: Upload generated files - MacOS
       uses: actions/upload-artifact@v4
@@ -84,8 +84,8 @@ jobs:
       # Step 4: Add generated files to the repository
     - name: Commit generated files
       run: |
-        git config --local user.name "GitHub Actions"
-        git config --local user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
         git add -f ${{ github.workspace }}/generated_files/libmoordyn.dll
         git commit -m "Add generated library files" || true
         git push -f origin HEAD:${{ github.ref }}
