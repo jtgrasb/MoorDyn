@@ -84,8 +84,8 @@ jobs:
       # Step 4: Add generated files to the repository
     - name: Commit generated files
       run: |
-        git config --local user.name "GitHub Actions"
-        git config --local user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
         git add -f ${{ github.workspace }}/generated_files/libmoordyn.dll
         git commit -m "Add generated library files" || true
         git push -f origin HEAD:${{ github.ref }}
