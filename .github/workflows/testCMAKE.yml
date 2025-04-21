@@ -92,7 +92,7 @@ jobs:
       # We are just testing in Linux
       run: 
         ls
-        
+
     - name: Upload generated files - MacOS
       uses: actions/upload-artifact@v4
       with:
@@ -129,7 +129,8 @@ jobs:
 
     - name: Configure CMake (Linux), build, and install
       run: |
-        cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install -DPYTHON_WRAPPER=OFF -DUSE_VTK=OFF -DBUILD_TESTING=OFF
+        mkdir -p ${{ github.workspace }}/install-${{ matrix.os }}
+        cmake -B ${{github.workspace}}/build-${{ matrix.os }} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install-${{ matrix.os }} -DPYTHON_WRAPPER=OFF -DUSE_VTK=OFF -DBUILD_TESTING=OFF
         cmake --build ${{ github.workspace }}/build-${{ matrix.os }} --config ${{env.BUILD_TYPE}}
         cmake --install ${{ github.workspace }}/build-${{ matrix.os }} --config ${{env.BUILD_TYPE}}
 
@@ -151,7 +152,4 @@ jobs:
       with:
         name: generated-libraries-linux
         path: |
-          ${{ github.workspace }}/install-${{ matrix.os }}/lib/libmoordyn.so
-          ${{ github.workspace }}/install-${{ matrix.os }}/lib/libmoordyn.so.2
-          ${{ github.workspace }}/install-${{ matrix.os }}/lib/libmoordyn.so.2.3
-      if: runner.os == 'Linux'
+          ${{ github.workspace }}/install-${{ matrix.os }}/lib/*libmoordyn*
