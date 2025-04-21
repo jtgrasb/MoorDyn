@@ -97,10 +97,9 @@ jobs:
     - name: Upload generated files - MacOS
       uses: actions/upload-artifact@v4
       with:
-        name: generated-libraries-macos
+        name: generated-libraries-macos-${{matrix.arch}}
         path: |
           ${{github.workspace}}/install-${{ matrix.os }}/lib/*libmoordyn*
-      if: runner.os == 'MacOS'
 
   build-linux:
     needs: [build-macos]
