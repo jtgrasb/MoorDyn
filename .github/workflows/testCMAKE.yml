@@ -36,10 +36,6 @@ jobs:
         patch=`cat CMakeLists.txt | grep MOORDYN_PATCH_VERSION | head -1 | awk -F' ' '{print $2}' | awk -F')' '{print $1}'`
         echo "moordyn_version=$major.$minor.$patch" >> $GITHUB_OUTPUT
 
-    - name: Create install folder
-      run: |
-         mkdir -p ${{ github.workspace }}/install-${{ matrix.os }}
-
     - name: Configure CMake (Windows), build, and install
       run: |
         mkdir -p ${{ github.workspace }}/install-${{ matrix.os }}
