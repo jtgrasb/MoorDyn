@@ -88,7 +88,7 @@ jobs:
       run: cpack -C ${{env.BUILD_TYPE}}
 
     - name: Test - list install/lib folder-mac
-      working-directory: ${{github.workspace}}/install/lib
+      working-directory: ${{github.workspace}}/install-${{ matrix.os }}/lib
       # We are just testing in Linux
       run: 
         ls
@@ -98,9 +98,7 @@ jobs:
       with:
         name: generated-libraries
         path: |
-          ${{github.workspace}}/install-${{ matrix.os }}/lib/libmoordyn.dylib
-          ${{github.workspace}}/install-${{ matrix.os }}/lib/libmoordyn.2.dylib
-          ${{github.workspace}}/install-${{ matrix.os }}/lib/libmoordyn.2.4.dylib
+          ${{github.workspace}}/install-${{ matrix.os }}/lib/**
       if: runner.os == 'MacOS'
 
   build-linux:
