@@ -59,7 +59,7 @@ jobs:
     - name: Upload generated files - Windows
       uses: actions/upload-artifact@v4
       with:
-        name: generated-libraries
+        name: generated-libraries-windows
         path: |
           ${{github.workspace}}/generated_files/**
 
@@ -92,13 +92,13 @@ jobs:
       # We are just testing in Linux
       run: 
         ls
-
+        
     - name: Upload generated files - MacOS
       uses: actions/upload-artifact@v4
       with:
-        name: generated-libraries
+        name: generated-libraries-macos
         path: |
-          ${{github.workspace}}/install-${{ matrix.os }}/lib/**
+          ${{github.workspace}}/install-${{ matrix.os }}/lib/*libmoordyn*
       if: runner.os == 'MacOS'
 
   build-linux:
@@ -149,7 +149,7 @@ jobs:
     - name: Upload generated files - Linux
       uses: actions/upload-artifact@v4
       with:
-        name: generated-libraries
+        name: generated-libraries-linux
         path: |
           ${{ github.workspace }}/install-${{ matrix.os }}/lib/libmoordyn.so
           ${{ github.workspace }}/install-${{ matrix.os }}/lib/libmoordyn.so.2
