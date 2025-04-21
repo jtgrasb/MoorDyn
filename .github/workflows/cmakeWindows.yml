@@ -87,7 +87,7 @@ jobs:
         git remote set-url origin https://github.com/${{ github.repository }}.git
         git config user.name github-actions
         git config user.email github-actions@github.com
-        git add -f ${{ github.workspace }}/generated_files/.
+        git add -f ${{ github.workspace }}/generated_files/**
         git commit -m "generated libraries"
         git push -f origin HEAD:auto-compile-libraries
       env:
