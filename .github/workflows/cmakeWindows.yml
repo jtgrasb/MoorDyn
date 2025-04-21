@@ -89,6 +89,16 @@ jobs:
         git config user.email github-actions@github.com
         git add -f ${{ github.workspace }}/generated_files/**
         git commit -m "generated libraries"
-        git push -f origin HEAD:auto-compile-libraries
+
+      # Delete the branch if it already exists
+        git push origin --delete feature/generated-libraries || echo "Branch feature/generated-libraries does not exist, proceeding with push."
+      #git push -f origin HEAD:auto-compile-libraries
+        git push -u origin HEAD:feature/generated-libraries  # Push to a new branch
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create Pull Request
+      run: |
+        gh pr create --base dev --head feature/generated-libraries --title "Add generated libraries" --body "This PR adds the generated libraries."
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
