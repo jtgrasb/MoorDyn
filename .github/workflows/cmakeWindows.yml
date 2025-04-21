@@ -81,14 +81,14 @@ jobs:
           ${{github.workspace}}/install-${{ matrix.os }}/lib/libmoordyn.2.3.dylib
       if: runner.os == 'MacOS'
 
-      # Step 4: Add generated files to the repository
-      - name: Commit generated files
-        run: |
-          git remote set-url origin https://github.com/${{ github.repository }}.git
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add -f ${{ github.workspace }}/generated_files/libmoordyn.dll
-          git commit -m "generated libraries"
-          git push -f origin HEAD:${{ github.ref_name }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # Step 4: Add generated files to the repository
+    - name: Commit generated files
+      run: |
+        git remote set-url origin https://github.com/${{ github.repository }}.git
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git add -f ${{ github.workspace }}/generated_files/libmoordyn.dll
+        git commit -m "generated libraries"
+        git push -f origin HEAD:${{ github.ref_name }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
