@@ -1,4 +1,4 @@
-name: CMake
+name: CMake for 3 systems
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         required: false
         type: string
         default: '["ubuntu-22.04"]'
-  #pull_request:      # Triggers the workflow on pull request events
+  pull_request:      # Triggers the workflow on pull request events
 
 permissions: write-all
 
@@ -17,11 +17,64 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  build-windows:
     runs-on: ${{ matrix.os }}
     strategy:
         matrix:
-            os: [ubuntu-22.04, windows-latest, macos-latest]
+            os: [windows-latest]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+       repository: 'FloatingArrayDesign/MoorDyn'
+
+    - name: moordyn_version
+      id: moordyn_version
+      shell: bash
+      run: |
+        major=`cat CMakeLists.txt | grep MOORDYN_MAJOR_VERSION | head -1 | awk -F' ' '{print $2}' | awk -F')' '{print $1}'`
+        minor=`cat CMakeLists.txt | grep MOORDYN_MINOR_VERSION | head -1 | awk -F' ' '{print $2}' | awk -F')' '{print $1}'`
+        patch=`cat CMakeLists.txt | grep MOORDYN_PATCH_VERSION | head -1 | awk -F' ' '{print $2}' | awk -F')' '{print $1}'`
+        echo "moordyn_version=$major.$minor.$patch" >> $GITHUB_OUTPUT
+
+    - name: Create install folder
+      run: |
+         mkdir -p ${{ github.workspace }}/install-${{ matrix.os }}
+
+    - name: Configure CMake (Windows), build, and install
+      run: |
+        mkdir -p ${{ github.workspace }}/install-${{ matrix.os }}
+        cmake -B ${{github.workspace}}/build-${{ matrix.os }} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DEXTERNAL_EIGEN:BOOL=OFF -DPYTHON_WRAPPER:BOOL=OFF -DFORTRAN_WRAPPER:BOOL=OFF -DRUST_WRAPPER:BOOL=OFF -DUSE_VTK=OFF -DMOORDYN_PACKAGE_IGNORE_VTK_DEPENDENCY=ON -DBUILD_TESTING=OFF
+        cmake --build ${{ github.workspace }}/build-${{ matrix.os }} --config ${{env.BUILD_TYPE}}
+        cmake --install ${{ github.workspace }}/build-${{ matrix.os }} --config ${{env.BUILD_TYPE}} 
+
+    - name: Set $PATH (Windows)
+      run: Add-Content $env:GITHUB_PATH "${{github.workspace}}\install\bin"
+
+    - name: Rename moordyn.dll to libmoordyn.dll
+      run: |
+        mkdir -p ${{ github.workspace }}/generated_files
+        mv "${{ github.workspace }}/install/bin/moordyn.dll" "${{ github.workspace }}/generated_files/libmoordyn.dll"
+      if: runner.os == 'Windows'
+
+    - name: List generated files
+      run: |
+        echo "Contents of generated_files:"
+        ls ${{ github.workspace }}/generated_files
+
+    - name: Upload generated files - Windows
+      uses: actions/upload-artifact@v4
+      with:
+        name: generated-libraries
+        path: |
+          ${{github.workspace}}/generated_files/libmoordyn.dll
+      if: runner.os == 'Windows'
+
+  build-macos:
+    needs: [build-windows]
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [macos-latest]
     steps:
     - uses: actions/checkout@v4
       with:
@@ -83,9 +136,147 @@ jobs:
         BUILD_DIR="${{ github.workspace }}/build-${{ matrix.os }}"
         cmake --build "$BUILD_DIR" --config ${{env.BUILD_TYPE}}
 
-    # We do a little hack here. We install the library so we perfectly know the
-    # path. Then we set the environment variable to let the OS find the
-    # libraries
+    - name: Install
+      run: |
+        BUILD_DIR="${{ github.workspace }}/build-${{ matrix.os }}"
+        cmake --install "$BUILD_DIR" --config ${{env.BUILD_TYPE}} --prefix "${{ github.workspace }}/install-${{ matrix.os }}"
+
+    - name: Set $PATH (Windows)
+      run: Add-Content $env:GITHUB_PATH "${{github.workspace}}\install\bin"
+      if: runner.os == 'Windows'
+
+    - name: Create Installer
+      working-directory: ${{ github.workspace }}/build-${{ matrix.os }}
+      shell: bash
+      # Package the installer
+      run: cpack -C ${{env.BUILD_TYPE}}
+
+    - name: Test - list build folder
+      working-directory: ${{ github.workspace }}/build-${{ matrix.os }}
+      run: 
+        ls
+        
+    - name: Test - list install folder
+      working-directory: ${{ github.workspace }}/install-${{ matrix.os }}
+      run: 
+        ls
+
+    - name: Test - list install/lib folder-linux
+      working-directory: ${{ github.workspace }}/install-${{ matrix.os }}/lib
+      # We are just testing in Linux
+      run: 
+        ls
+      if: runner.os == 'Linux'
+
+    - name: Test - list install/lib folder-mac
+      working-directory: ${{github.workspace}}/install/lib
+      # We are just testing in Linux
+      run: 
+        ls
+      if: runner.os == 'MacOS'
+
+    - name: Test - list install/bin folder
+      working-directory: ${{github.workspace}}/install/bin
+      run: 
+        ls
+      if: runner.os == 'Windows'
+
+    # Step 4: Upload the generated files
+    - name: Upload generated files - Linux
+      uses: actions/upload-artifact@v4
+      with:
+        name: generated-libraries
+        path: |
+          ${{ github.workspace }}/install-${{ matrix.os }}/lib/libmoordyn.so
+          ${{ github.workspace }}/install-${{ matrix.os }}/lib/libmoordyn.so.2
+          ${{ github.workspace }}/install-${{ matrix.os }}/lib/libmoordyn.so.2.3
+      if: runner.os == 'Linux'
+
+    - name: Upload generated files - MacOS
+      uses: actions/upload-artifact@v4
+      with:
+        name: generated-libraries
+        path: |
+          ${{github.workspace}}/install-${{ matrix.os }}/lib/libmoordyn.dylib
+          ${{github.workspace}}/install-${{ matrix.os }}/lib/libmoordyn.2.dylib
+          ${{github.workspace}}/install-${{ matrix.os }}/lib/libmoordyn.2.3.dylib
+      if: runner.os == 'MacOS'
+
+    - name: Upload generated files - Windows
+      uses: actions/upload-artifact@v4
+      with:
+        name: generated-libraries
+        path: |
+          ${{github.workspace}}/install-${{ matrix.os }}/lib/moordyn.dll
+      if: runner.os == 'Windows'
+
+  build-linux:
+    needs: [build-macos]
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [ubuntu-22.04]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+       repository: 'FloatingArrayDesign/MoorDyn'
+
+    - name: moordyn_version
+      id: moordyn_version
+      shell: bash
+      run: |
+        major=`cat CMakeLists.txt | grep MOORDYN_MAJOR_VERSION | head -1 | awk -F' ' '{print $2}' | awk -F')' '{print $1}'`
+        minor=`cat CMakeLists.txt | grep MOORDYN_MINOR_VERSION | head -1 | awk -F' ' '{print $2}' | awk -F')' '{print $1}'`
+        patch=`cat CMakeLists.txt | grep MOORDYN_PATCH_VERSION | head -1 | awk -F' ' '{print $2}' | awk -F')' '{print $1}'`
+        echo "moordyn_version=$major.$minor.$patch" >> $GITHUB_OUTPUT
+
+    - name: Setup GCC Fortran (Linux)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gfortran
+      if: runner.os == 'Linux'
+
+    - name: Create install folder
+      run: |
+         mkdir -p ${{ github.workspace }}/install-${{ matrix.os }}
+
+    - name: Configure CMake (Linux)
+      run: |
+        BUILD_DIR="${{ github.workspace }}/build-${{ matrix.os }}"
+        mkdir -p "$BUILD_DIR"
+        if [ "${{ matrix.architecture }}" == "x86_64" ]; then
+          cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install -DPYTHON_WRAPPER=OFF -DUSE_VTK=OFF -DBUILD_TESTING=OFF -DCMAKE_CXX_FLAGS="-m64"
+        elif [ "${{ matrix.architecture }}" == "i686" ]; then
+          cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install -DPYTHON_WRAPPER=OFF -DUSE_VTK=OFF -DBUILD_TESTING=OFF
+        elif [ "${{ matrix.architecture }}" == "aarch64" ]; then
+          cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install -DPYTHON_WRAPPER=OFF -DUSE_VTK=OFF -DBUILD_TESTING=OFF
+        elif [ "${{ matrix.architecture }}" == "ppc64le" ]; then
+          cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install -DPYTHON_WRAPPER=OFF -DUSE_VTK=OFF -DBUILD_TESTING=OFF
+        elif [ "${{ matrix.architecture }}" == "s390x" ]; then
+          cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install -DPYTHON_WRAPPER=OFF -DUSE_VTK=OFF -DBUILD_TESTING=OFF
+        fi
+      if: runner.os == 'Linux'
+
+    - name: Configure CMake (MacOS)
+      run: |
+        BUILD_DIR="${{ github.workspace }}/build-${{ matrix.os }}"
+        mkdir -p "$BUILD_DIR"
+        cmake -B ${{github.workspace}}/build-${{ matrix.os }} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DEXTERNAL_EIGEN:BOOL=OFF -DPYTHON_WRAPPER:BOOL=OFF -DFORTRAN_WRAPPER:BOOL=OFF -DRUST_WRAPPER:BOOL=OFF -DUSE_VTK=OFF -DBUILD_TESTING=OFF
+      if: runner.os == 'MacOS'
+
+    - name: Configure CMake (Windows)
+      run: |
+        BUILD_DIR="${{ github.workspace }}/build-${{ matrix.os }}"
+        mkdir -p "$BUILD_DIR"
+        cmake -B ${{github.workspace}}/build-${{ matrix.os }} -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DEXTERNAL_EIGEN:BOOL=OFF -DPYTHON_WRAPPER:BOOL=OFF -DFORTRAN_WRAPPER:BOOL=OFF -DRUST_WRAPPER:BOOL=OFF -DUSE_VTK=OFF -DMOORDYN_PACKAGE_IGNORE_VTK_DEPENDENCY=ON -DBUILD_TESTING=OFF
+      if: runner.os == 'Windows'
+
+    - name: Build
+      id: build
+      run: |
+        BUILD_DIR="${{ github.workspace }}/build-${{ matrix.os }}"
+        cmake --build "$BUILD_DIR" --config ${{env.BUILD_TYPE}}
 
     - name: Install
       run: |
