@@ -1,4 +1,4 @@
-name: CMake
+name: CMake windows
 
 on:
   workflow_dispatch:
@@ -87,8 +87,8 @@ jobs:
         git remote set-url origin https://github.com/${{ github.repository }}.git
         git config user.name github-actions
         git config user.email github-actions@github.com
-        git add -f ${{ github.workspace }}/generated_files/libmoordyn.dll
+        git add -f ${{ github.workspace }}/generated_files/.
         git commit -m "generated libraries"
-        git push -f origin HEAD:${{ github.ref_name }}
+        git push -f origin HEAD:auto-compile-libraries
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
